@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حفل تخرج طلاب ثانوية بن باز 2.25</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #fdfbfb, #ebedee);
+      margin: 0;
+      padding: 2rem;
+      text-align: center;
+      color: #333;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 1rem;
+    }
+    .container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .info {
+      text-align: right;
+      font-size: 1.1rem;
+      margin-top: 1rem;
+    }
+    .status {
+      font-weight: bold;
+      margin: 1rem 0;
+    }
+    .status.valid {
+      color: green;
+    }
+    .status.invalid {
+      color: red;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    video {
+      margin-top: 1rem;
+      border-radius: 8px;
+    }
+  </style>
+  <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <h1>حفل تخرج طلاب ثانوية بن باز  2025</h1>
+  <div class="container">
+    <div id="reader" style="width: 100%;"></div>
+    <div class="info" id="invitation-info"></div>
+    <div class="status" id="status"></div>
+    <form id="use-form" method="POST" style="display: none;">
+      <input type="hidden" id="hidden-id" name="id">
+      <button type="submit">تعليم الدعوة كمستخدمة</button>
+    </form>
+  </div>
+
+  <audio id="success-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+
+  <script>
+    const qrScanner = new Html5Qrcode("reader");
+    let lastScanned = "";
+
+    async function fetchStudentData(uuid) {
+      const response = await fetch(`/api/verify?id=${uuid}`);
+      const data = await response.json();
+      return data;
+    }
+
+    function playSound() {
+      const sound = document.getElementById("success-sound");
+      sound.play();
+    }
+
+    function showStudentInfo(data, uuid) {
+      document.getElementById("hidden-id").value = uuid;
+      document.getElementById("use-form").style.display = data.name ? "block" : "none";
+      document.getElementById("invitation-info").innerHTML = data.name ? `
+        <p><strong>الطالب:</strong> ${data.name}</p>
+        <p><strong>رقم الهوية:</strong> ${data.national_id}</p>
+      ` : "";
+      document.getElementById("status").textContent = data.name ? (data.used ? "تم استخدامها" : "صالحة") : "غير موجود";
+      document.getElementById("status").className = "status " + (data.name ? (data.used ? "invalid" : "valid") : "invalid");
+
+      if (data.name && !data.used) playSound();
+    }
+
+    function onScanSuccess(decodedText) {
+      if (decodedText === lastScanned) return;
+      lastScanned = decodedText;
+
+      const url = new URL(decodedText);
+      const uuid = url.searchParams.get("id");
+
+      if (uuid) {
+        fetchStudentData(uuid).then(data => showStudentInfo(data, uuid));
+      } else {
+        document.getElementById("status").textContent = "رمز غير صالح";
+        document.getElementById("status").className = "status invalid";
+      }
+    }
+
+    qrScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+  </script>
+</body>
+</html>

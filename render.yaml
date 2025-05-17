@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: graduation-app
+    runtime: python
+    buildCommand: ""
+    startCommand: python invitation_verification_app.py
+    envVars:
+      - key: FLASK_ENV
+        value: production
