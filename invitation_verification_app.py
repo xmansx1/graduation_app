@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, redirect
 import sqlite3
 import os
 
@@ -27,6 +27,17 @@ def verify():
             name, national_id, used = row
 
     return render_template("index.html", name=name, national_id=national_id, used=used, invitation_id=invitation_id)
+
+@app.route("/reset", methods=["POST"])
+def reset_invitation():
+    invitation_id = request.form.get("id", "")
+    if invitation_id:
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("UPDATE invitations SET used = 0 WHERE id = ?", (invitation_id,))
+        conn.commit()
+        conn.close()
+    return redirect(f"/?id={invitation_id}")
 
 @app.route("/api/verify")
 def api_verify():

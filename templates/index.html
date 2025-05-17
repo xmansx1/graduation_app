@@ -90,6 +90,10 @@
       <input type="hidden" id="hidden-id" name="id">
       <button type="submit">تعليم الدعوة كمستخدمة</button>
     </form>
+    <form id="reset-form" method="POST" action="/reset" style="display: none;">
+      <input type="hidden" id="reset-id" name="id">
+      <button type="submit" style="background-color:#888;margin-top:10px;">إعادة تعيين الدعوة</button>
+    </form>
   </div>
 
   <footer>
@@ -108,6 +112,7 @@
       document.getElementById("status").textContent = "";
       document.getElementById("status").className = "status";
       document.getElementById("use-form").style.display = "none";
+      document.getElementById("reset-form").style.display = "none";
       lastScanned = "";
     }
 
@@ -117,7 +122,9 @@
 
     function showStudentInfo(data, uuid) {
       document.getElementById("hidden-id").value = uuid;
-      document.getElementById("use-form").style.display = data.name ? "block" : "none";
+      document.getElementById("reset-id").value = uuid;
+      document.getElementById("use-form").style.display = data.name && !data.used ? "block" : "none";
+      document.getElementById("reset-form").style.display = data.name && data.used ? "block" : "none";
       document.getElementById("invitation-info").innerHTML = data.name ? `
         <p><strong>الطالب:</strong> ${data.name}</p>
         <p><strong>رقم الهوية:</strong> ${data.national_id}</p>
@@ -126,7 +133,7 @@
       document.getElementById("status").className = "status " + (data.name ? (data.used ? "invalid" : "valid") : "invalid");
 
       playSound(data.name && !data.used ? 'success' : 'error');
-      setTimeout(resetScanner, data.name && !data.used ? 8000 : 6000);
+      setTimeout(resetScanner, data.name ? 8000 : 5000);
     }
 
     async function fetchStudentData(uuid) {
