@@ -29,7 +29,9 @@ def verify():
 
 if __name__ == "__main__":
     print("✅ التطبيق يعمل الآن على http://127.0.0.1:5000")
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
     from flask import jsonify
 
