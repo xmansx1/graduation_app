@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>حفل تخرج طلاب ثانوية عبدالعزيز بن باز 2025</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
   <style>
     body {
       font-family: 'Cairo', sans-serif;
@@ -35,10 +36,9 @@
       max-width: 600px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     }
-    video {
+    #reader {
       width: 100%;
       border-radius: 12px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.15);
     }
     .info {
       text-align: right;
@@ -83,7 +83,7 @@
     <h1>حفل تخرج طلاب ثانوية الشيخ عبدالعزيز بن باز 2025</h1>
   </header>
   <div class="container">
-    <video id="preview" autoplay playsinline></video>
+    <div id="reader"></div>
     <div class="info" id="invitation-info"></div>
     <div class="status" id="status"></div>
     <form id="use-form" method="POST" style="display: none;">
@@ -100,100 +100,77 @@
   <audio id="error-sound" src="https://www.soundjay.com/button/beep-05.wav" preload="auto"></audio>
 
   <script>
+    const qrScanner = new Html5Qrcode("reader");
     let lastScanned = "";
-    let video = document.getElementById('preview');
 
-    async function startScanner() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { exact: "environment" }
-          },
-          audio: false
-        });
-
-        video.srcObject = stream;
-
-        const track = stream.getVideoTracks()[0];
-        const imageCapture = new ImageCapture(track);
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-
-        setInterval(async () => {
-          const bitmap = await imageCapture.grabFrame();
-          canvas.width = bitmap.width;
-          canvas.height = bitmap.height;
-          context.drawImage(bitmap, 0, 0);
-
-          const imageData = canvas.toDataURL('image/png');
-          const code = await scanImage(imageData);
-          if (code && code !== lastScanned) {
-            lastScanned = code;
-            processQRCode(code);
-          }
-        }, 1000);
-      } catch (err) {
-        console.error("خطأ في الوصول إلى الكاميرا الخلفية:", err);
-        alert("تعذر تشغيل الكاميرا الخلفية، يرجى السماح بالأذونات أو تجربة متصفح آخر.");
-      }
+    function resetScanner() {
+      document.getElementById("invitation-info").innerHTML = "";
+      document.getElementById("status").textContent = "";
+      document.getElementById("status").className = "status";
+      document.getElementById("use-form").style.display = "none";
+      lastScanned = "";
     }
 
-    async function scanImage(imageDataUrl) {
-      try {
-        const response = await fetch("https://api.qrserver.com/v1/read-qr-code/", {
-          method: "POST",
-          body: new URLSearchParams({ fileurl: imageDataUrl })
-        });
-        const json = await response.json();
-        return json[0].symbol[0].data;
-      } catch (e) {
-        return null;
-      }
+    function playSound(type) {
+      document.getElementById(type === 'success' ? "success-sound" : "error-sound").play();
     }
 
-    function processQRCode(content) {
-      console.log("✅ تم قراءة QR:", content);
+    function showStudentInfo(data, uuid) {
+      document.getElementById("hidden-id").value = uuid;
+      document.getElementById("use-form").style.display = data.name ? "block" : "none";
+      document.getElementById("invitation-info").innerHTML = data.name ? `
+        <p><strong>الطالب:</strong> ${data.name}</p>
+        <p><strong>رقم الهوية:</strong> ${data.national_id}</p>
+      ` : "";
+      document.getElementById("status").textContent = data.name ? (data.used ? "تم استخدامها" : "صالحة") : "غير موجود";
+      document.getElementById("status").className = "status " + (data.name ? (data.used ? "invalid" : "valid") : "invalid");
+
+      playSound(data.name && !data.used ? 'success' : 'error');
+      setTimeout(resetScanner, data.name && !data.used ? 8000 : 6000);
+    }
+
+    async function fetchStudentData(uuid) {
+      const response = await fetch(`/api/verify?id=${uuid}`);
+      return await response.json();
+    }
+
+    function onScanSuccess(decodedText) {
+      if (decodedText === lastScanned) return;
+      lastScanned = decodedText;
       let uuid = "";
+
       try {
-        if (content.includes("?id=")) {
-          const url = new URL(content);
+        if (decodedText.includes("?id=")) {
+          const url = new URL(decodedText);
           uuid = url.searchParams.get("id");
-        } else if (content.match(/^[0-9a-fA-F-]{36}$/)) {
-          uuid = content;
+        } else if (decodedText.match(/^[0-9a-fA-F-]{36}$/)) {
+          uuid = decodedText;
         }
       } catch (e) {
-        console.error("❌ خطأ في تحليل QR:", e);
+        console.error("خطأ في تحليل QR:", e);
+        return;
       }
 
       if (uuid) {
-        fetch(`/api/verify?id=${uuid}`)
-          .then(res => res.json())
-          .then(data => {
-            document.getElementById("hidden-id").value = uuid;
-            document.getElementById("use-form").style.display = data.name ? "block" : "none";
-            document.getElementById("invitation-info").innerHTML = data.name ? `
-              <p><strong>الطالب:</strong> ${data.name}</p>
-              <p><strong>رقم الهوية:</strong> ${data.national_id}</p>
-            ` : "";
-            document.getElementById("status").textContent = data.name ? (data.used ? "تم استخدامها" : "صالحة") : "غير موجود";
-            document.getElementById("status").className = "status " + (data.name ? (data.used ? "invalid" : "valid") : "invalid");
-            if (data.name && !data.used) {
-              document.getElementById("success-sound").play();
-              setTimeout(() => lastScanned = "", 8000);
-            } else {
-              document.getElementById("error-sound").play();
-              setTimeout(() => lastScanned = "", 6000);
-            }
-          });
+        fetchStudentData(uuid).then(data => showStudentInfo(data, uuid));
       } else {
         document.getElementById("status").textContent = "رمز غير صالح";
         document.getElementById("status").className = "status invalid";
-        document.getElementById("error-sound").play();
-        setTimeout(() => lastScanned = "", 5000);
+        playSound("error");
+        setTimeout(resetScanner, 5000);
       }
     }
 
-    startScanner();
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices && devices.length) {
+        const backCamera = devices.find(device => device.label.toLowerCase().includes("back")) || devices[0];
+        qrScanner.start(
+          { deviceId: { exact: backCamera.id } },
+          { fps: 10, qrbox: 250 },
+          onScanSuccess
+        );
+      }
+    }).catch(err => console.error("لا يمكن الوصول للكاميرا:", err));
   </script>
 </body>
 </html>
