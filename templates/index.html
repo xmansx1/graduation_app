@@ -3,57 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>حفل تخرج طلاب ثانوية عبدالعزيز بن باز</title>
+  <title>حفل تخرج طلاب ثانوية عبدالعزيز بن باز 2025</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
   <script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #fdfbfb, #ebedee);
+      font-family: 'Cairo', sans-serif;
       margin: 0;
-      padding: 2rem;
+      padding: 0;
+      background: linear-gradient(to right, #f0f2f5, #dfe9f3);
       text-align: center;
       color: #333;
     }
-    h1 {
-      color: #2c3e50;
-      margin-bottom: 1rem;
+    header {
+      background-color: #ffffff;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    header img {
+      height: 80px;
+    }
+    header h1 {
+      margin: 0.5rem 0 0;
+      color: #1f3c88;
+      font-size: 1.8rem;
     }
     .container {
-      background: #fff;
-      border-radius: 12px;
+      background: #ffffff;
+      border-radius: 16px;
       padding: 2rem;
+      margin: 2rem auto;
       max-width: 600px;
-      margin: auto;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     }
     video {
       width: 100%;
-      border-radius: 10px;
+      border-radius: 12px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.15);
     }
-    .info, .status {
+    .info {
       text-align: right;
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       margin-top: 1rem;
     }
-    .status.valid { color: green; }
-    .status.invalid { color: red; }
+    .status {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    .valid {
+      color: green;
+    }
+    .invalid {
+      color: red;
+    }
     button {
-      background-color: #3498db;
+      background-color: #1f3c88;
       color: white;
-      border: none;
       padding: 0.75rem 1.5rem;
       font-size: 1rem;
+      border: none;
       border-radius: 8px;
       cursor: pointer;
-      margin-top: 1rem;
+      margin-top: 1.5rem;
     }
-    button:hover { background-color: #2980b9; }
+    button:hover {
+      background-color: #163173;
+    }
   </style>
 </head>
 <body>
-  <h1>حفل تخرج طلاب ثانوية عبدالعزيز بن باز 2025</h1>
+  <header>
+    <img src="/static/logo.png" alt="شعار المدرسة">
+    <h1>حفل تخرج طلاب ثانوية الشيخ عبدالعزيز بن باز 2025</h1>
+  </header>
   <div class="container">
     <video id="preview"></video>
+    <button onclick="switchCamera()">🔄 تبديل الكاميرا</button>
     <div class="info" id="invitation-info"></div>
     <div class="status" id="status"></div>
     <form id="use-form" method="POST" style="display: none;">
@@ -63,10 +89,28 @@
   </div>
 
   <audio id="success-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+  <audio id="error-sound" src="https://www.soundjay.com/button/beep-05.wav" preload="auto"></audio>
 
   <script>
     let scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
     let lastScanned = "";
+    let cameras = [];
+    let currentCameraIndex = 0;
+
+    function switchCamera() {
+      if (cameras.length > 1) {
+        currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+        scanner.stop().then(() => scanner.start(cameras[currentCameraIndex]));
+      }
+    }
+
+    function resetScanner() {
+      document.getElementById("invitation-info").innerHTML = "";
+      document.getElementById("status").textContent = "";
+      document.getElementById("status").className = "status";
+      document.getElementById("use-form").style.display = "none";
+      lastScanned = "";
+    }
 
     scanner.addListener('scan', function (content) {
       if (content === lastScanned) return;
@@ -97,18 +141,27 @@
             ` : "";
             document.getElementById("status").textContent = data.name ? (data.used ? "تم استخدامها" : "صالحة") : "غير موجود";
             document.getElementById("status").className = "status " + (data.name ? (data.used ? "invalid" : "valid") : "invalid");
-            if (data.name && !data.used) document.getElementById("success-sound").play();
+            if (data.name && !data.used) {
+              document.getElementById("success-sound").play();
+              setTimeout(resetScanner, 8000);
+            } else {
+              document.getElementById("error-sound").play();
+              setTimeout(resetScanner, 6000);
+            }
           });
       } else {
         document.getElementById("status").textContent = "رمز غير صالح";
         document.getElementById("status").className = "status invalid";
+        document.getElementById("error-sound").play();
+        setTimeout(resetScanner, 5000);
       }
     });
 
-    Instascan.Camera.getCameras().then(function (cameras) {
-      if (cameras.length > 0) {
-        // محاولة اختيار الكاميرا الخلفية (عادة تكون الأخيرة في القائمة)
-        let backCamera = cameras.find(camera => camera.name.toLowerCase().includes('back')) || cameras[cameras.length - 1];
+    Instascan.Camera.getCameras().then(function (availableCameras) {
+      if (availableCameras.length > 0) {
+        cameras = availableCameras;
+        let backCamera = cameras.find(c => c.name.toLowerCase().includes('back')) || cameras[cameras.length - 1];
+        currentCameraIndex = cameras.indexOf(backCamera);
         scanner.start(backCamera);
       } else {
         alert('لا توجد كاميرا متاحة');
