@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>حفل تخرج طلاب ثانوية عبدالعزيز بن باز</title>
+  <script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -25,21 +26,17 @@
       margin: auto;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
-    .info {
+    video {
+      width: 100%;
+      border-radius: 10px;
+    }
+    .info, .status {
       text-align: right;
       font-size: 1.1rem;
       margin-top: 1rem;
     }
-    .status {
-      font-weight: bold;
-      margin: 1rem 0;
-    }
-    .status.valid {
-      color: green;
-    }
-    .status.invalid {
-      color: red;
-    }
+    .status.valid { color: green; }
+    .status.invalid { color: red; }
     button {
       background-color: #3498db;
       color: white;
@@ -50,20 +47,13 @@
       cursor: pointer;
       margin-top: 1rem;
     }
-    button:hover {
-      background-color: #2980b9;
-    }
-    video {
-      margin-top: 1rem;
-      border-radius: 8px;
-    }
+    button:hover { background-color: #2980b9; }
   </style>
-  <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
 </head>
 <body>
   <h1>حفل تخرج طلاب ثانوية عبدالعزيز بن باز 2025</h1>
   <div class="container">
-    <div id="reader" style="width: 100%;"></div>
+    <video id="preview"></video>
     <div class="info" id="invitation-info"></div>
     <div class="status" id="status"></div>
     <form id="use-form" method="POST" style="display: none;">
@@ -75,63 +65,55 @@
   <audio id="success-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 
   <script>
-    const qrScanner = new Html5Qrcode("reader");
+    let scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
     let lastScanned = "";
 
-    async function fetchStudentData(uuid) {
-      const response = await fetch(`/api/verify?id=${uuid}`);
-      const data = await response.json();
-      return data;
-    }
-
-    function playSound() {
-      document.getElementById("success-sound").play();
-    }
-
-    function showStudentInfo(data, uuid) {
-      document.getElementById("hidden-id").value = uuid;
-      document.getElementById("use-form").style.display = data.name ? "block" : "none";
-      document.getElementById("invitation-info").innerHTML = data.name ? `
-        <p><strong>الطالب:</strong> ${data.name}</p>
-        <p><strong>رقم الهوية:</strong> ${data.national_id}</p>
-      ` : "";
-      document.getElementById("status").textContent = data.name ? (data.used ? "تم استخدامها" : "صالحة") : "غير موجود";
-      document.getElementById("status").className = "status " + (data.name ? (data.used ? "invalid" : "valid") : "invalid");
-
-      if (data.name && !data.used) playSound();
-    }
-
-    function onScanSuccess(decodedText) {
-      console.log("✅ تم قراءة QR:", decodedText);
-
-      if (decodedText === lastScanned) return;
-      lastScanned = decodedText;
+    scanner.addListener('scan', function (content) {
+      if (content === lastScanned) return;
+      lastScanned = content;
+      console.log("✅ تم قراءة QR:", content);
 
       let uuid = "";
       try {
-        if (decodedText.includes("?id=")) {
-          const url = new URL(decodedText);
+        if (content.includes("?id=")) {
+          const url = new URL(content);
           uuid = url.searchParams.get("id");
-        } else if (decodedText.match(/^[0-9a-fA-F-]{36}$/)) {
-          uuid = decodedText;
+        } else if (content.match(/^[0-9a-fA-F-]{36}$/)) {
+          uuid = content;
         }
       } catch (e) {
         console.error("❌ خطأ في تحليل QR:", e);
       }
 
       if (uuid) {
-        fetchStudentData(uuid).then(data => showStudentInfo(data, uuid));
+        fetch(`/api/verify?id=${uuid}`)
+          .then(res => res.json())
+          .then(data => {
+            document.getElementById("hidden-id").value = uuid;
+            document.getElementById("use-form").style.display = data.name ? "block" : "none";
+            document.getElementById("invitation-info").innerHTML = data.name ? `
+              <p><strong>الطالب:</strong> ${data.name}</p>
+              <p><strong>رقم الهوية:</strong> ${data.national_id}</p>
+            ` : "";
+            document.getElementById("status").textContent = data.name ? (data.used ? "تم استخدامها" : "صالحة") : "غير موجود";
+            document.getElementById("status").className = "status " + (data.name ? (data.used ? "invalid" : "valid") : "invalid");
+            if (data.name && !data.used) document.getElementById("success-sound").play();
+          });
       } else {
         document.getElementById("status").textContent = "رمز غير صالح";
         document.getElementById("status").className = "status invalid";
       }
-    }
+    });
 
-    qrScanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      onScanSuccess
-    );
+    Instascan.Camera.getCameras().then(function (cameras) {
+      if (cameras.length > 0) {
+        scanner.start(cameras[0]);
+      } else {
+        alert('لا توجد كاميرا متاحة');
+      }
+    }).catch(function (e) {
+      console.error(e);
+    });
   </script>
 </body>
 </html>
