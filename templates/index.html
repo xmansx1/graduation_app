@@ -107,7 +107,9 @@
 
     Instascan.Camera.getCameras().then(function (cameras) {
       if (cameras.length > 0) {
-        scanner.start(cameras[0]);
+        // محاولة اختيار الكاميرا الخلفية (عادة تكون الأخيرة في القائمة)
+        let backCamera = cameras.find(camera => camera.name.toLowerCase().includes('back')) || cameras[cameras.length - 1];
+        scanner.start(backCamera);
       } else {
         alert('لا توجد كاميرا متاحة');
       }
