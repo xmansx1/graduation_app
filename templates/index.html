@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>حفل تخرج طلاب ثانوية بن باز 2.25</title>
+  <title>حفل تخرج طلاب ثانوية عبدالعزيز بن باز</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -61,7 +61,7 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
 </head>
 <body>
-  <h1>حفل تخرج طلاب ثانوية بن باز  2025</h1>
+  <h1>حفل تخرج طلاب ثانوية عبدالعزيز بن باز 2025</h1>
   <div class="container">
     <div id="reader" style="width: 100%;"></div>
     <div class="info" id="invitation-info"></div>
@@ -85,8 +85,7 @@
     }
 
     function playSound() {
-      const sound = document.getElementById("success-sound");
-      sound.play();
+      document.getElementById("success-sound").play();
     }
 
     function showStudentInfo(data, uuid) {
@@ -103,11 +102,22 @@
     }
 
     function onScanSuccess(decodedText) {
+      console.log("✅ تم قراءة QR:", decodedText);
+
       if (decodedText === lastScanned) return;
       lastScanned = decodedText;
 
-      const url = new URL(decodedText);
-      const uuid = url.searchParams.get("id");
+      let uuid = "";
+      try {
+        if (decodedText.includes("?id=")) {
+          const url = new URL(decodedText);
+          uuid = url.searchParams.get("id");
+        } else if (decodedText.match(/^[0-9a-fA-F-]{36}$/)) {
+          uuid = decodedText;
+        }
+      } catch (e) {
+        console.error("❌ خطأ في تحليل QR:", e);
+      }
 
       if (uuid) {
         fetchStudentData(uuid).then(data => showStudentInfo(data, uuid));
