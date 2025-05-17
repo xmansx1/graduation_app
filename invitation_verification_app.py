@@ -1,5 +1,6 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import sqlite3
+import os
 
 app = Flask(__name__)
 db_path = "invitations.db"
@@ -27,14 +28,6 @@ def verify():
 
     return render_template("index.html", name=name, national_id=national_id, used=used, invitation_id=invitation_id)
 
-if __name__ == "__main__":
-    print("✅ التطبيق يعمل الآن على http://127.0.0.1:5000")
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
-    from flask import jsonify
-
 @app.route("/api/verify")
 def api_verify():
     invitation_id = request.args.get("id", "")
@@ -48,3 +41,8 @@ def api_verify():
         return jsonify({"name": row[0], "national_id": row[1], "used": bool(row[2])})
     else:
         return jsonify({})
+
+if __name__ == "__main__":
+    print("✅ التطبيق يعمل الآن على http://127.0.0.1:5000")
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
