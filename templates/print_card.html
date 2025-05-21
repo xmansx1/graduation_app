@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>بطاقة دعوة</title>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f7fa;
+    }
+    .card {
+      background: white;
+      width: 600px;
+      margin: auto;
+      padding: 30px;
+      border: 2px solid #007bff;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .logo {
+      width: 100px;
+      margin-bottom: 10px;
+    }
+    .title {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: #1f3c88;
+    }
+    .info {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+    }
+    .qr {
+      margin: 20px auto;
+    }
+    .note {
+      font-size: 0.9rem;
+      color: red;
+      margin-top: 15px;
+    }
+    @media print {
+      button {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="شعار">
+    <div class="title">🎓 بطاقة دعوة لحفل التخرج</div>
+    <div class="info"><strong>اسم الطالب:</strong> {{ name }}</div>
+    <div class="info"><strong>رقم الهوية:</strong> {{ national_id }}</div>
+    <div class="qr">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?data={{ request.host_url }}?id={{ invitation_id }}&size=150x150" alt="QR Code">
+    </div>
+    <div class="note">⚠️ هذه الدعوة خاصة وغير قابلة للتحويل</div>
+    <button onclick="window.print()">🖨️ طباعة</button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - منصة بطاقتي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f6f8fa;
+      margin: 0;
+      padding: 1rem;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #1f3c88;
+      margin-bottom: 1rem;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      margin: 1rem 0;
+    }
+    .add-form input {
+      padding: 0.5rem;
+      margin: 0 0.5rem;
+    }
+    .add-form button {
+      padding: 0.5rem 1rem;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .stats .box {
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      width: 30%;
+    }
+    .stats .box h3 {
+      margin: 0.2rem 0;
+      font-size: 1.2rem;
+      color: #555;
+    }
+    .stats .box span {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #1f3c88;
+    }
+    table {
+      width: 95%;
+      margin: auto;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    th, td {
+      padding: 1rem;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background-color: #1f3c88;
+      color: white;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .used {
+      color: red;
+      font-weight: bold;
+    }
+    .valid {
+      color: green;
+      font-weight: bold;
+    }
+    form {
+      display: inline;
+    }
+    .btn {
+      padding: 0.3rem 0.8rem;
+      background-color: #1f3c88;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 2px;
+      font-size: 0.9rem;
+    }
+    .btn:hover {
+      background-color: #163173;
+    }
+    .btn-danger {
+      background-color: #e74c3c;
+    }
+    .btn-danger:hover {
+      background-color: #c0392b;
+    }
+    .btn-outline {
+      background: white;
+      color: #1f3c88;
+      border: 1px solid #1f3c88;
+    }
+    .btn-outline:hover {
+      background: #1f3c88;
+      color: white;
+    }
+    .btn-success {
+      background-color: green;
+    }
+    .btn-success:hover {
+      background-color: darkgreen;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 لوحة التحكم - منصة بطاقتي</h1>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="flash-messages" style="position: fixed; top: 1rem; right: 1rem; z-index: 1000;">
+      {% for category, message in messages %}
+        <div style="background-color: {{ 'green' if category == 'success' else 'red' }};
+                    color: white;
+                    padding: 10px 20px;
+                    margin-bottom: 10px;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+    <script>
+      setTimeout(() => {
+        const el = document.getElementById("flash-messages");
+        if (el) el.remove();
+      }, 3000); // تختفي بعد 3 ثوانٍ
+    </script>
+  {% endif %}
+{% endwith %}
+
+  <div class="top-bar">
+    <form class="add-form" method="POST" action="/add">
+      <input type="text" name="name" placeholder="اسم الطالب" required>
+      <input type="text" name="national_id" placeholder="رقم الهوية" required>
+      <button type="submit" class="btn btn-success">➕ إضافة طالب</button>
+    </form>
+    <form method="GET" action="/export">
+      <button class="btn btn-outline">⬇️ تصدير Excel</button>
+    </form>
+    <form method="GET" action="/logout">
+      <button class="btn btn-danger">🚪 تسجيل الخروج</button>
+    </form>
+  </div>
+
+  <div class="stats">
+    <div class="box">
+      <h3>إجمالي الدعوات</h3>
+      <span>{{ total }}</span>
+    </div>
+    <div class="box">
+      <h3>المستخدمة</h3>
+      <span style="color: red;">{{ used }}</span>
+    </div>
+    <div class="box">
+      <h3>الصالحة</h3>
+      <span style="color: green;">{{ valid }}</span>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>اسم الطالب</th>
+        <th>رقم الهوية</th>
+        <th>الحالة</th>
+        <th>آخر تحقق</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in invitations %}
+      <tr>
+        <td>{{ row[0] }}</td>
+        <td>{{ row[1] }}</td>
+        <td class="{{ 'used' if row[2] else 'valid' }}">{{ 'مستخدمة' if row[2] else 'صالحة' }}</td>
+        <td>{{ row[4] if row[4] else '-' }}</td>
+        <td>
+          {% if row[2] %}
+          <form method="POST" action="/reset">
+            <input type="hidden" name="id" value="{{ row[3] }}">
+            <button type="submit" class="btn">🔄 إعادة</button>
+          </form>
+          {% endif %}
+          <a href="/print/{{ row[3] }}" target="_blank" class="btn btn-outline">🖨️ طباعة</a>
+          <form method="POST" action="/delete/{{ row[3] }}" onsubmit="return confirm('هل تريد حذف هذه الدعوة؟');">
+            <button type="submit" class="btn btn-danger">❌ حذف</button>
+          </form>
+
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
